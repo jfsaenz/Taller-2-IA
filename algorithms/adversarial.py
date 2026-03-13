@@ -123,5 +123,56 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         - Do NOT prune in expectimax (unlike alpha-beta).
         - self.prob is set via the constructor argument prob.
         """
-        # TODO: Implement your code here
-        return None
+
+        def expectimax(current_state, depth, agent_index):
+            if depth == self.depth or current_state.is_win() or current_state.is_lose():
+                return self.evaluation_function(current_state)
+
+            legal_actions = current_state.get_legal_actions(agent_index)
+            if not legal_actions:
+                return self.evaluation_function(current_state)
+
+            num_agents = current_state.get_num_agents()
+            next_agent = (agent_index + 1) % num_agents
+            next_depth = depth + 1 if next_agent == 0 else depth
+
+            if agent_index == 0:
+                best_value = float("-inf")
+
+                for action in legal_actions:
+                    successor = current_state.generate_successor(agent_index, action)
+                    value = expectimax(successor, next_depth, next_agent)
+
+                    if value > best_value:
+                        best_value = value
+
+                return best_value
+
+            values = []
+
+            for action in legal_actions:
+                successor = current_state.generate_successor(agent_index, action)
+                values.append(expectimax(successor, next_depth, next_agent))
+
+            min_value = min(values)
+            avg_value = sum(values) / len(values)
+
+            return (1 - self.prob) * min_value + self.prob * avg_value
+
+        legal_actions = state.get_legal_actions(self.index)
+
+        if not legal_actions:
+            return None
+
+        best_action = None
+        best_value = float("-inf")
+
+        for action in legal_actions:
+            successor = state.generate_successor(self.index, action)
+            value = expectimax(successor, 0, 1)
+
+            if value > best_value:
+                best_value = value
+                best_action = action
+
+        return best_action
