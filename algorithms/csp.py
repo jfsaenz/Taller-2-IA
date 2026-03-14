@@ -250,5 +250,224 @@ def backtracking_mrv_lcv(csp: DroneAssignmentCSP) -> dict[str, str] | None:
       values that rule out the fewest choices for neighboring variables.
     - Use csp.get_num_conflicts(var, value, assignment) to count how many values would be ruled out for neighbors if var=value is assigned.
     """
-    # TODO: Implement your code here (BONUS)
-    return None
+    """
+    Primera versión: Pseudocodigo
+    def backtracking_mrv_lcv(csp: DroneAssignmentCSP) -> dict[str, str] | None:
+    # idea general:
+    # 1. si la asignación está completa, devolverla
+    # 2. escoger la variable no asignada con MRV
+    #    - la que tenga menos valores legales posibles
+    #    - si hay empate, usar degree heuristic
+    # 3. ordenar los valores del dominio con LCV
+    #    - primero los que menos conflictos generen
+    # 4. probar cada valor:
+    #    - si es consistente, asignarlo
+    #    - guardar copia de dominios
+    #    - hacer forward checking sobre vecinos
+    #    - si ningún dominio queda vacío, seguir recursivamente
+    #    - si falla, restaurar dominios y desasignar
+    # 5. si nada sirve, devolver None
+    pass
+    
+    Luego, se hizo una primera implementación ignorando estilo y eficiencia:
+    def backtracking_mrv_lcv(csp: DroneAssignmentCSP) -> dict[str, str] | None:
+    def backtrack(assignment):
+        # 1. si la asignación está completa, devolverla
+        if csp.is_complete(assignment):
+            return assignment
+
+        # 2. escoger variable no asignada con MRV
+        unassigned = csp.get_unassigned_variables(assignment)
+
+        best_var = None
+        best_count = None
+        best_degree = None
+
+        for var in unassigned:
+            legal_count = 0
+            for value in csp.domains[var]:
+                if csp.is_consistent(var, value, assignment):
+                    legal_count += 1
+
+            degree = 0
+            for neighbor in csp.get_neighbors(var):
+                if neighbor not in assignment:
+                    degree += 1
+
+            if best_var is None:
+                best_var = var
+                best_count = legal_count
+                best_degree = degree
+            else:
+                if legal_count < best_count:
+                    best_var = var
+                    best_count = legal_count
+                    best_degree = degree
+                elif legal_count == best_count:
+                    if degree > best_degree:
+                        best_var = var
+                        best_count = legal_count
+                        best_degree = degree
+
+        var = best_var
+
+        # 3. ordenar valores del dominio con LCV
+        value_conflicts = []
+
+        for value in csp.domains[var]:
+            conflicts = 0
+            temp_assignment = assignment.copy()
+            temp_assignment[var] = value
+
+            for neighbor in csp.get_neighbors(var):
+                if neighbor not in assignment:
+                    for neighbor_value in csp.domains[neighbor]:
+                        if not csp.is_consistent(neighbor, neighbor_value, temp_assignment):
+                            conflicts += 1
+
+            value_conflicts.append((value, conflicts))
+
+        value_conflicts.sort(key=lambda x: x[1])
+
+        ordered_values = []
+        for pair in value_conflicts:
+            ordered_values.append(pair[0])
+
+        # 4. probar cada valor
+        for value in ordered_values:
+            if csp.is_consistent(var, value, assignment):
+                csp.assign(var, value, assignment)
+
+                # guardar copia de dominios
+                old_domains = {}
+                for x in csp.domains:
+                    old_domains[x] = list(csp.domains[x])
+
+                # forward checking
+                failed = False
+                for neighbor in csp.get_neighbors(var):
+                    if neighbor not in assignment:
+                        new_domain = []
+                        for neighbor_value in csp.domains[neighbor]:
+                            if csp.is_consistent(neighbor, neighbor_value, assignment):
+                                new_domain.append(neighbor_value)
+
+                        csp.domains[neighbor] = new_domain
+
+                        if len(new_domain) == 0:
+                            failed = True
+
+                # si ningún dominio queda vacío, seguir recursivamente
+                if not failed:
+                    result = backtrack(assignment)
+                    if result is not None:
+                        return result
+
+                # si falla, restaurar dominios y desasignar
+                csp.domains = old_domains
+                csp.unassign(var, assignment)
+
+        # 5. si nada sirve, devolver None
+        return None
+
+    return backtrack({})
+
+
+    Finalmente, se realizo la siguiente consulta a ChatGPT:
+    "Por favor refinale eficiencia y estilo"
+    Dando esta como version definitiva
+
+    """
+
+    def count_legal_values(var, assignment):
+        count = 0
+        for value in csp.domains[var]:
+            if csp.is_consistent(var, value, assignment):
+                count += 1
+        return count
+
+    def count_unassigned_neighbors(var, assignment):
+        count = 0
+        for neighbor in csp.get_neighbors(var):
+            if neighbor not in assignment:
+                count += 1
+        return count
+
+    def select_unassigned_variable(assignment):
+        unassigned = csp.get_unassigned_variables(assignment)
+
+        return min(
+            unassigned,
+            key=lambda var: (
+                count_legal_values(var, assignment),
+                -count_unassigned_neighbors(var, assignment),
+            ),
+        )
+
+    def order_domain_values(var, assignment):
+        def lcv_score(value):
+            temp_assignment = assignment.copy()
+            temp_assignment[var] = value
+            conflicts = 0
+
+            for neighbor in csp.get_neighbors(var):
+                if neighbor in assignment:
+                    continue
+
+                for neighbor_value in csp.domains[neighbor]:
+                    if not csp.is_consistent(
+                        neighbor, neighbor_value, temp_assignment
+                    ):
+                        conflicts += 1
+
+            return conflicts
+
+        return sorted(csp.domains[var], key=lcv_score)
+
+    def copy_domains():
+        return {
+            var: list(values)
+            for var, values in csp.domains.items()
+        }
+
+    def forward_check(var, assignment):
+        for neighbor in csp.get_neighbors(var):
+            if neighbor in assignment:
+                continue
+
+            new_domain = []
+            for value in csp.domains[neighbor]:
+                if csp.is_consistent(neighbor, value, assignment):
+                    new_domain.append(value)
+
+            if not new_domain:
+                return False
+
+            csp.domains[neighbor] = new_domain
+
+        return True
+
+    def backtrack(assignment):
+        if csp.is_complete(assignment):
+            return assignment
+
+        var = select_unassigned_variable(assignment)
+
+        for value in order_domain_values(var, assignment):
+            if not csp.is_consistent(var, value, assignment):
+                continue
+
+            saved_domains = copy_domains()
+            csp.assign(var, value, assignment)
+
+            if forward_check(var, assignment):
+                result = backtrack(assignment)
+                if result is not None:
+                    return result
+
+            csp.domains = saved_domains
+            csp.unassign(var, assignment)
+
+        return None
+
+    return backtrack({})
