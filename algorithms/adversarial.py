@@ -65,8 +65,51 @@ class MinimaxAgent(MultiAgentSearchAgent):
         - The next agent is (agent_index + 1) % num_agents. Depth decreases after all agents have moved (full ply).
         - Return the ACTION (not the value) that maximizes the minimax value for the drone.
         """
-        # TODO: Implement your code here
-        return None
+        # Obtengo las acciones legales del drone
+        legal_actions = state.get_legal_actions(self.index)
+        if not legal_actions:
+            return None
+        
+        # Inicializo variables para la mejor acción y valor
+        best_action = None
+        best_value = float('-inf')
+        # Calculo el número de agentes una vez para pasarlo a minimax
+        num_agents = state.get_num_agents()
+        
+        # Pruebo cada acción posible del drone
+        for action in legal_actions:
+            successor = state.generate_successor(self.index, action)
+            # Llamo a minimax con el estado sucesor, empezando desde el agente 1 (primer hunter)
+            value = self.minimax(successor, 1, self.depth, num_agents)
+            if value > best_value:
+                best_value = value
+                best_action = action
+        
+        return best_action
+    
+    def minimax(self, state, agent_index, depth, num_agents):
+        # Si llego a profundidad 0 o estado terminal, evaluo el estado
+        if depth == 0 or state.is_win() or state.is_lose():
+            return self.evaluation_function(state)
+        
+        # Calculo el siguiente agente y ajusto la profundidad si es un nuevo ply
+        next_agent = (agent_index + 1) % num_agents
+        next_depth = depth if next_agent != 0 else depth - 1
+        
+        # Si es el turno del drone (MAX), maximizo
+        if agent_index == 0:
+            value = float('-inf')
+            for action in state.get_legal_actions(agent_index):
+                successor = state.generate_successor(agent_index, action)
+                value = max(value, self.minimax(successor, next_agent, next_depth, num_agents))
+            return value
+        # Si es turno de un hunter (MIN), minimizo
+        else:
+            value = float('inf')
+            for action in state.get_legal_actions(agent_index):
+                successor = state.generate_successor(agent_index, action)
+                value = min(value, self.minimax(successor, next_agent, next_depth, num_agents))
+            return value
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
