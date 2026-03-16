@@ -65,8 +65,74 @@ class MinimaxAgent(MultiAgentSearchAgent):
         - The next agent is (agent_index + 1) % num_agents. Depth decreases after all agents have moved (full ply).
         - Return the ACTION (not the value) that maximizes the minimax value for the drone.
         """
-        #PROMPT:Me podrías ayudar a revisar si este código funciona bien, y que podría mejorar para que sea más eficiente
-        #código corregido por IA (Git Hub Copilot):
+        #Primera Versión, sin ayuda de IA:
+        """
+        def get_action(self, state: GameState) -> Directions | None:
+            legal_actions = state.get_legal_actions(self.index)
+            if not legal_actions:
+                return None
+            
+            best_action = None
+            best_value = float('-inf')
+            
+            for action in legal_actions:
+                successor = state.generate_successor(self.index, action)
+                value = self.minimax(successor, 1, self.depth)
+                if value > best_value:
+                    best_value = value
+                    best_action = action
+            
+            return best_action
+        
+        def minimax(self, state, agent_index, depth):
+            if depth == 0 or state.is_win() or state.is_lose():
+                return self.evaluation_function(state)
+            
+            if agent_index == 0:  # MAX for drone
+                value = float('-inf')
+                for action in state.get_legal_actions(agent_index):
+                    successor = state.generate_successor(agent_index, action)
+                    value = max(value, self.minimax(successor, 1, depth-1))
+                return value
+            else:  # MIN for hunters
+                value = float('inf')
+                for action in state.get_legal_actions(agent_index):
+                    successor = state.generate_successor(agent_index, action)
+                    value = min(value, self.minimax(successor, (agent_index + 1) % state.get_num_agents(), depth-1))
+                return value
+        """
+        #Prompt utilizado para mejorar el código creado en un principio:
+        """
+        Estoy haciendo un taller de Inteligencia Artificial y tengo que implementar minimax para un juego multi-agente con drone (MAX) y hunters (MIN). 
+        Ya tengo una primera versión que funciona, pero es bastante básica y quiero mejorarla manteniendo la misma lógica y estilo del código. 
+        Esta es la versión que tengo ahora: 
+        
+        def minimax(self, state, agent_index, depth):
+            if depth == 0 or state.is_win() or state.is_lose():
+                return self.evaluation_function(state)
+            
+            if agent_index == 0:  # MAX for drone
+                value = float('-inf')
+                for action in state.get_legal_actions(agent_index):
+                    successor = state.generate_successor(agent_index, action)
+                    value = max(value, self.minimax(successor, 1, depth-1))
+                return value
+            else:  # MIN for hunters
+                value = float('inf')
+                for action in state.get_legal_actions(agent_index):
+                    successor = state.generate_successor(agent_index, action)
+                    value = min(value, self.minimax(successor, (agent_index + 1) % state.get_num_agents(), depth-1))
+                return value
+        
+        Lo que quiero es mantener exactamente este enfoque de minimax puro, usando una función recursiva interna, sin meter alpha-beta ni otras optimizaciones porque esas van en otras funciones del taller. Solo quiero dejar esta versión un poco más completa y limpia, manejando correctamente la profundidad (disminuir solo después de un ply completo) y los turnos de múltiples agentes.
+        
+        También me gustaría agregar contadores simples para saber cuántos nodos se exploran durante la búsqueda, e imprimir esos valores al final para poder comparar luego con otras variantes del algoritmo.
+        
+        Puedes devolver solo la versión final de la función minimax en Python manteniendo el estilo simple y claro de este código?
+        """
+        
+        #Código Final con ayuda de la IA (GitHub Copilot):
+        
         # Obtengo las acciones legales del drone
         legal_actions = state.get_legal_actions(self.index)
         if not legal_actions:
@@ -77,6 +143,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
         best_value = float('-inf')
         # Calculo el número de agentes una vez para pasarlo a minimax
         num_agents = state.get_num_agents()
+        # Inicializo contador de nodos explorados
+        self.nodes_explored = 0
         
         # Pruebo cada acción posible del drone
         for action in legal_actions:
@@ -87,11 +155,13 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 best_value = value
                 best_action = action
         
+        print(f"[minimax] nodes explored: {self.nodes_explored}")
         return best_action
     
     def minimax(self, state, agent_index, depth, num_agents):
         # Si llego a profundidad 0 o estado terminal, evaluo el estado
         if depth == 0 or state.is_win() or state.is_lose():
+            self.nodes_explored += 1
             return self.evaluation_function(state)
         
         # Calculo el siguiente agente y ajusto la profundidad si es un nuevo ply
@@ -120,8 +190,88 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     MAX node: prune when value > beta (strict).
     MIN node: prune when value < alpha (strict).
     """
-    #PROMPT:Me podrías ayudar a revisar si este código funciona bien, y que podría mejorar para que sea más eficiente
-    #código corregido por IA (Git Hub Copilot):
+    #Primera Versión, sin ayuda de IA:
+    """
+    def get_action(self, state: GameState) -> Directions | None:
+        legal_actions = state.get_legal_actions(self.index)
+        if not legal_actions:
+            return None
+        
+        best_action = None
+        best_value = float('-inf')
+        num_agents = state.get_num_agents()
+        alpha = float('-inf')
+        beta = float('inf')
+        
+        for action in legal_actions:
+            successor = state.generate_successor(self.index, action)
+            value = self.alphabeta(successor, 1, self.depth, num_agents, alpha, beta)
+            if value > best_value:
+                best_value = value
+                best_action = action
+            alpha = max(alpha, value)
+        
+        return best_action
+    
+    def alphabeta(self, state, agent_index, depth, num_agents, alpha, beta):
+        if depth == 0 or state.is_win() or state.is_lose():
+            return self.evaluation_function(state)
+        
+        next_agent = (agent_index + 1) % num_agents
+        next_depth = depth if next_agent != 0 else depth - 1
+        
+        if agent_index == 0:
+            value = float('-inf')
+            for action in state.get_legal_actions(agent_index):
+                successor = state.generate_successor(agent_index, action)
+                value = max(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
+                alpha = max(alpha, value)
+            return value
+        else:
+            value = float('inf')
+            for action in state.get_legal_actions(agent_index):
+                successor = state.generate_successor(agent_index, action)
+                value = min(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
+                beta = min(beta, value)
+            return value
+    """
+    #Prompt utilizado para mejorar el código creado en un principio:
+    """
+    Estoy haciendo un taller de Inteligencia Artificial y tengo que implementar alpha-beta pruning para un juego multi-agente. 
+    Ya tengo una primera versión que tiene la estructura con alpha y beta, pero no hace la poda correctamente, explora todas las acciones sin pruning. 
+    Esta es la versión que tengo ahora: 
+    
+    def alphabeta(self, state, agent_index, depth, num_agents, alpha, beta):
+        if depth == 0 or state.is_win() or state.is_lose():
+            return self.evaluation_function(state)
+        
+        next_agent = (agent_index + 1) % num_agents
+        next_depth = depth if next_agent != 0 else depth - 1
+        
+        if agent_index == 0:
+            value = float('-inf')
+            for action in state.get_legal_actions(agent_index):
+                successor = state.generate_successor(agent_index, action)
+                value = max(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
+                alpha = max(alpha, value)
+            return value
+        else:
+            value = float('inf')
+            for action in state.get_legal_actions(agent_index):
+                successor = state.generate_successor(agent_index, action)
+                value = min(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
+                beta = min(beta, value)
+            return value
+    
+    Lo que quiero es mantener exactamente este enfoque de alpha-beta, usando una función recursiva interna, pero agregar la poda correctamente: en MAX, si value >= beta, return value. En MIN, si value <= alpha, return value.
+    
+    También me gustaría agregar contadores simples para saber cuántos nodos se exploran durante la búsqueda, e imprimir esos valores al final para poder comparar luego con minimax.
+    
+    Puedes devolver solo la versión final de la función alphabeta en Python manteniendo el estilo simple y claro de este código?
+    """
+    
+    #Código Final con ayuda de la IA (GitHub Copilot):
+    
     def get_action(self, state: GameState) -> Directions | None:
         """
         Returns the best action for the drone using alpha-beta pruning.
@@ -149,6 +299,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         # Alpha y beta iniciales
         alpha = float('-inf')
         beta = float('inf')
+        # Inicializo contador de nodos explorados
+        self.nodes_explored = 0
         
         # Pruebo cada acción posible del drone
         for action in legal_actions:
@@ -161,11 +313,13 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             # Actualizo alpha para poda
             alpha = max(alpha, value)
         
+        print(f"[alphabeta] nodes explored: {self.nodes_explored}")
         return best_action
     
     def alphabeta(self, state, agent_index, depth, num_agents, alpha, beta):
         # Si llego a profundidad 0 o estado terminal, evaluo el estado
         if depth == 0 or state.is_win() or state.is_lose():
+            self.nodes_explored += 1
             return self.evaluation_function(state)
         
         # Calculo el siguiente agente y ajusto la profundidad si es un nuevo ply
@@ -178,9 +332,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             for action in state.get_legal_actions(agent_index):
                 successor = state.generate_successor(agent_index, action)
                 value = max(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
-                # Actualizo alpha
+                # Poda: si value >= beta, no necesito explorar más
+                if value >= beta:
+                    return value
                 alpha = max(alpha, value)
-                # No uso break para poda, exploro todas
             return value
         # Si es turno de un hunter (MIN), minimizo con alpha-beta
         else:
@@ -188,9 +343,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             for action in state.get_legal_actions(agent_index):
                 successor = state.generate_successor(agent_index, action)
                 value = min(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
-                # Actualizo beta
+                # Poda: si value <= alpha, no necesito explorar más
+                if value <= alpha:
+                    return value
                 beta = min(beta, value)
-                # Exploro todas
             return value
 
 
