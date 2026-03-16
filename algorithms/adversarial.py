@@ -187,7 +187,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 value = min(value, self.alphabeta(successor, next_agent, next_depth, num_agents, alpha, beta))
                 # Actualizo beta
                 beta = min(beta, value)
-                # No uso break para poda, exploro todas
+                # Exploro todas
             return value
 
 
