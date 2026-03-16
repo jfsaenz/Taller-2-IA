@@ -65,6 +65,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
         - The next agent is (agent_index + 1) % num_agents. Depth decreases after all agents have moved (full ply).
         - Return the ACTION (not the value) that maximizes the minimax value for the drone.
         """
+        #PROMPT:Me podrías ayudar a revisar si este código funciona bien, y que podría mejorar para que sea más eficiente
+        #código corregido por IA (Git Hub Copilot):
         # Obtengo las acciones legales del drone
         legal_actions = state.get_legal_actions(self.index)
         if not legal_actions:
@@ -118,7 +120,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     MAX node: prune when value > beta (strict).
     MIN node: prune when value < alpha (strict).
     """
-
+    #PROMPT:Me podrías ayudar a revisar si este código funciona bien, y que podría mejorar para que sea más eficiente
+    #código corregido por IA (Git Hub Copilot):
     def get_action(self, state: GameState) -> Directions | None:
         """
         Returns the best action for the drone using alpha-beta pruning.
