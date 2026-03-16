@@ -106,6 +106,22 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Estoy haciendo un taller de Inteligencia Artificial y tengo que implementar minimax para un juego multi-agente con drone (MAX) y hunters (MIN). 
         Ya tengo una primera versión que funciona, pero es bastante básica y quiero mejorarla manteniendo la misma lógica y estilo del código. 
         Esta es la versión que tengo ahora: 
+        def get_action(self, state: GameState) -> Directions | None:
+            legal_actions = state.get_legal_actions(self.index)
+            if not legal_actions:
+                return None
+            
+            best_action = None
+            best_value = float('-inf')
+            
+            for action in legal_actions:
+                successor = state.generate_successor(self.index, action)
+                value = self.minimax(successor, 1, self.depth)
+                if value > best_value:
+                    best_value = value
+                    best_action = action
+            
+            return best_action
         
         def minimax(self, state, agent_index, depth):
             if depth == 0 or state.is_win() or state.is_lose():
@@ -240,6 +256,26 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     Estoy haciendo un taller de Inteligencia Artificial y tengo que implementar alpha-beta pruning para un juego multi-agente. 
     Ya tengo una primera versión que tiene la estructura con alpha y beta, pero no hace la poda correctamente, explora todas las acciones sin pruning. 
     Esta es la versión que tengo ahora: 
+    def get_action(self, state: GameState) -> Directions | None:
+        legal_actions = state.get_legal_actions(self.index)
+        if not legal_actions:
+            return None
+        
+        best_action = None
+        best_value = float('-inf')
+        num_agents = state.get_num_agents()
+        alpha = float('-inf')
+        beta = float('inf')
+        
+        for action in legal_actions:
+            successor = state.generate_successor(self.index, action)
+            value = self.alphabeta(successor, 1, self.depth, num_agents, alpha, beta)
+            if value > best_value:
+                best_value = value
+                best_action = action
+            alpha = max(alpha, value)
+        
+        return best_action
     
     def alphabeta(self, state, agent_index, depth, num_agents, alpha, beta):
         if depth == 0 or state.is_win() or state.is_lose():
